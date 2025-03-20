@@ -3,14 +3,23 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase
 import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
 // 🔹 REPLACE WITH YOUR FIREBASE CONFIG 🔹
+// const firebaseConfig = {
+//     apiKey: "AIzaSyBUcvmCoJSukaQ5o_btp0bMSksLw2zCIoI",
+//     authDomain: "pickleballplayerlist-54733.firebaseapp.com",
+//     projectId: "pickleballplayerlist-54733",
+//     storageBucket: "pickleballplayerlist-54733.firebasestorage.app",
+//     messagingSenderId: "613225623433",
+//     appId: "1:613225623433:web:20af3581090694a6357b58"
+//   };
+
 const firebaseConfig = {
-    apiKey: "AIzaSyBUcvmCoJSukaQ5o_btp0bMSksLw2zCIoI",
-    authDomain: "pickleballplayerlist-54733.firebaseapp.com",
-    projectId: "pickleballplayerlist-54733",
-    storageBucket: "pickleballplayerlist-54733.firebasestorage.app",
-    messagingSenderId: "613225623433",
-    appId: "1:613225623433:web:20af3581090694a6357b58"
-  };
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+};
 
 // Initialize Firebase & Firestore
 const app = initializeApp(firebaseConfig);
