@@ -1,90 +1,27 @@
-// Import Firebase SDK
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-
-// 🔹 REPLACE WITH YOUR FIREBASE CONFIG 🔹
-// const firebaseConfig = {
-//     apiKey: "AIzaSyBUcvmCoJSukaQ5o_btp0bMSksLw2zCIoI",
-//     authDomain: "pickleballplayerlist-54733.firebaseapp.com",
-//     projectId: "pickleballplayerlist-54733",
-//     storageBucket: "pickleballplayerlist-54733.firebasestorage.app",
-//     messagingSenderId: "613225623433",
-//     appId: "1:613225623433:web:20af3581090694a6357b58"
-//   };
-
-const firebaseConfig = {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+// Load players and schedule when the page loads
+window.onload = function () {
+    loadPlayers();
+    generateSchedule();
 };
-
-// Initialize Firebase & Firestore
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const playersDoc = doc(db, "pickleball", "playersList");
 
 let players = [];
 let numRounds = 8;
 let numCourts = 5;
 let schedule = [];
 
-// 🔹 Load Players from Firestore 🔹
-async function loadPlayers() {
-    onSnapshot(playersDoc, (docSnapshot) => {
-        if (docSnapshot.exists()) {
-            players = docSnapshot.data().list || [];
-            displayPlayers();
-            generateSchedule();
-        }
-    });
+// 🔹 Save Players to Local Storage 🔹
+function savePlayers() {
+    localStorage.setItem("players", JSON.stringify(players));
 }
 
-// 🔹 Save Players to Firestore 🔹
-async function savePlayers() {
-    await setDoc(playersDoc, { list: players });
-}
-
-// 🔹 Add New Player 🔹
-function addPlayer() {
-    let inputText = document.getElementById("playerName").value.trim().toUpperCase();
-    if (inputText) {
-        let newNames = inputText.split(",").map(name => name.trim()).filter(name => name !== "");
-        newNames.forEach(name => {
-            if (!players.includes(name)) {
-                players.push(name);
-            }
-        });
-        savePlayers();
+// 🔹 Load Players from Local Storage 🔹
+function loadPlayers() {
+    let savedPlayers = localStorage.getItem("players");
+    if (savedPlayers) {
+        players = JSON.parse(savedPlayers);
+        displayPlayers();
+        generateSchedule();
     }
-    document.getElementById("playerName").value = "";
-}
-
-// 🔹 Remove Player 🔹
-function removePlayer(index) {
-    players.splice(index, 1);
-    savePlayers();
-}
-
-// 🔹 Clear Players 🔹
-function clearPlayers() {
-    players = [];
-    savePlayers();
-}
-
-// 🔹 Update Settings 🔹
-function updateSettings() {
-    numCourts = parseInt(document.getElementById("numCourts").value) || numCourts;
-    numRounds = parseInt(document.getElementById("numRounds").value) || numRounds;
-
-    if (numCourts < 1) numCourts = 1;
-    if (numCourts > 10) numCourts = 10;
-    if (numRounds < 1) numRounds = 1;
-    if (numRounds > 20) numRounds = 20;
-
-    generateSchedule();
 }
 
 // 🔹 Generate Schedule 🔹
@@ -132,7 +69,7 @@ function displayPlayers() {
 function displaySchedule() {
     const scheduleBody = document.getElementById("scheduleBody");
     scheduleBody.innerHTML = "";
-    
+
     schedule.forEach((round, index) => {
         let row = `<tr><td>Round ${index + 1}</td>`;
         round.forEach(court => row += `<td>${court}</td>`);
@@ -141,9 +78,67 @@ function displaySchedule() {
     });
 }
 
-// 🔹 Utility: Shuffle Players 🔹
-function shufflePlayers(arr) {
-    return arr.sort(() => Math.random() - 0.5);
+// 🔹 Add Player 🔹
+function addPlayer() {
+    let inputText = document.getElementById("playerName").value.trim().toUpperCase();
+    if (inputText) {
+        let newNames = inputText.split(",").map(name => name.trim()).filter(name => name !== "");
+        newNames.forEach(name => {
+            if (!players.includes(name)) {
+                players.push(name);
+            }
+        });
+        savePlayers();
+        displayPlayers();
+        generateSchedule();
+    }
+    document.getElementById("playerName").value = "";
+}
+
+// 🔹 Remove Player 🔹
+function removePlayer(index) {
+    players.splice(index, 1);
+    savePlayers();
+    displayPlayers();
+    generateSchedule();
+}
+
+// 🔹 Clear Players 🔹
+function clearPlayers() {
+    players = [];
+    localStorage.removeItem("players");
+    displayPlayers();
+    generateSchedule();
+}
+
+// 🔹 Handle CSV Upload 🔹
+function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const text = e.target.result;
+        const lines = text.split("\n").map(line => line.trim().toUpperCase()).filter(line => line);
+        players = [...new Set([...players, ...lines])];
+        savePlayers();
+        displayPlayers();
+        generateSchedule();
+    };
+    reader.readAsText(file);
+}
+
+// 🔹 Update Courts & Rounds 🔹
+function updateSettings() {
+    numCourts = parseInt(document.getElementById("numCourts").value) || numCourts;
+    numRounds = parseInt(document.getElementById("numRounds").value) || numRounds;
+
+    if (numCourts < 1) numCourts = 1;
+    if (numCourts > 10) numCourts = 10;
+    if (numRounds < 1) numRounds = 1;
+    if (numRounds > 20) numRounds = 20;
+
+    generateSchedule();
 }
 
 // 🔹 Print Schedule 🔹
@@ -163,6 +158,11 @@ function printSchedule() {
     newWindow.document.close();
 }
 
+// 🔹 Utility: Shuffle Players 🔹
+function shufflePlayers(arr) {
+    return arr.sort(() => Math.random() - 0.5);
+}
+
 // 🔹 Event Listeners 🔹
 document.getElementById("playerName").addEventListener("keypress", function(event) {
     if (event.key === "Enter") {
@@ -170,8 +170,6 @@ document.getElementById("playerName").addEventListener("keypress", function(even
         addPlayer();
     }
 });
+document.getElementById("csvUpload").addEventListener("change", handleFileUpload);
 document.getElementById("numCourts").addEventListener("input", updateSettings);
 document.getElementById("numRounds").addEventListener("input", updateSettings);
-
-// Load players from Firestore on startup
-loadPlayers();
