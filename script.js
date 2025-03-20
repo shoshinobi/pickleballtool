@@ -1,140 +1,44 @@
-// Load players and schedule when the page loads
-window.onload = function () {
-    loadPlayers();
-    generateSchedule();
-};
+// Import Firebase SDK
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+// 🔹 REPLACE WITH YOUR FIREBASE CONFIG 🔹
+const firebaseConfig = {
+    apiKey: "AIzaSyBUcvmCoJSukaQ5o_btp0bMSksLw2zCIoI",
+    authDomain: "pickleballplayerlist-54733.firebaseapp.com",
+    projectId: "pickleballplayerlist-54733",
+    storageBucket: "pickleballplayerlist-54733.firebasestorage.app",
+    messagingSenderId: "613225623433",
+    appId: "1:613225623433:web:20af3581090694a6357b58"
+  };
+
+// Initialize Firebase & Firestore
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const playersDoc = doc(db, "pickleball", "playersList");
 
 let players = [];
 let numRounds = 8;
 let numCourts = 5;
 let schedule = [];
 
-function savePlayers() {
-    localStorage.setItem("players", JSON.stringify(players));
-}
-
-function loadPlayers() {
-    let savedPlayers = localStorage.getItem("players");
-    if (savedPlayers) {
-        players = JSON.parse(savedPlayers);
-        displayPlayers();
-        generateSchedule();
-    }
-}
-
-function generateSchedule() {
-    const scheduleBody = document.getElementById("scheduleBody");
-    const tableHeader = document.getElementById("tableHeader");
-
-    if (players.length < 4) {
-        scheduleBody.innerHTML = "<tr><td colspan='" + (numCourts + 1) + "'>Not enough players to create matches.</td></tr>";
-        return;
-    }
-
-    let playerPlayCounts = {};
-    players.forEach(player => playerPlayCounts[player] = 0);
-
-    schedule = [];
-
-    for (let i = 0; i < numRounds; i++) {
-        let roundMatches = [];
-        let availablePlayers = [...players];
-
-        availablePlayers = shufflePlayers(availablePlayers);
-
-        let sittingOut = determineSitOuts(availablePlayers, playerPlayCounts);
-        availablePlayers = availablePlayers.filter(player => !sittingOut.includes(player));
-
-        while (availablePlayers.length >= 4) {
-            let courtPlayers = getBalancedPairing(availablePlayers);
-            courtPlayers.forEach(player => playerPlayCounts[player]++);
-            roundMatches.push(`${courtPlayers[0]} & ${courtPlayers[1]} vs ${courtPlayers[2]} & ${courtPlayers[3]}`);
+// 🔹 Load Players from Firestore 🔹
+async function loadPlayers() {
+    onSnapshot(playersDoc, (docSnapshot) => {
+        if (docSnapshot.exists()) {
+            players = docSnapshot.data().list || [];
+            displayPlayers();
+            generateSchedule();
         }
-
-        if (sittingOut.length > 0) {
-            roundMatches.push(`Sitting Out: ${sittingOut.join(", ")}`);
-        }
-
-        schedule.push(roundMatches);
-    }
-
-    displaySchedule();
-    displayPlayers();
-}
-
-function shufflePlayers(playerList) {
-    for (let i = playerList.length - 1; i > 0; i--) {
-        let j = Math.floor(Math.random() * (i + 1));
-        [playerList[i], playerList[j]] = [playerList[j], playerList[i]];
-    }
-    return playerList;
-}
-
-function getBalancedPairing(playerList) {
-    let team1 = [playerList.shift(), playerList.pop()];
-    let team2 = [playerList.shift(), playerList.pop()];
-    return [...team1, ...team2];
-}
-
-function determineSitOuts(playerList, playCounts) {
-    let totalPlayers = playerList.length;
-    let playersNeeded = numCourts * 4;
-    let sitOuts = [];
-
-    if (totalPlayers % 4 === 0) return sitOuts;
-
-    let numToSitOut = totalPlayers % 4;
-    let sortedPlayers = [...playerList].sort((a, b) => playCounts[a] - playCounts[b]);
-
-    for (let i = 0; i < numToSitOut; i++) {
-        sitOuts.push(sortedPlayers[i]);
-        playCounts[sortedPlayers[i]]++;
-    }
-
-    return sitOuts;
-}
-
-function displaySchedule() {
-    const scheduleBody = document.getElementById("scheduleBody");
-    const tableHeader = document.getElementById("tableHeader");
-
-    scheduleBody.innerHTML = "";
-    tableHeader.innerHTML = "<th>Round</th>";
-
-    for (let i = 1; i <= numCourts; i++) {
-        tableHeader.innerHTML += `<th>Court ${i}</th>`;
-    }
-
-    let hasSitOuts = schedule.some(round => round.some(match => match.startsWith("Sitting Out")));
-    if (hasSitOuts) {
-        tableHeader.innerHTML += `<th>Sitting Out</th>`;
-    }
-
-    schedule.forEach((round, index) => {
-        let row = `<tr><td>Round ${index + 1}</td>`;
-        round.forEach(court => {
-            row += `<td>${court}</td>`;
-        });
-        row += `</tr>`;
-        scheduleBody.innerHTML += row;
     });
 }
 
-function displayPlayers() {
-    const playerGrid = document.getElementById("playerGrid");
-    const playerCount = document.getElementById("playerCount");
-
-    playerGrid.innerHTML = "";
-    playerCount.textContent = `(${players.length})`;
-
-    players.forEach((player, index) => {
-        let div = document.createElement("div");
-        div.className = "player-item";
-        div.innerHTML = `${player} <button class="remove-btn" onclick="removePlayer(${index})">❌</button>`;
-        playerGrid.appendChild(div);
-    });
+// 🔹 Save Players to Firestore 🔹
+async function savePlayers() {
+    await setDoc(playersDoc, { list: players });
 }
 
+// 🔹 Add New Player 🔹
 function addPlayer() {
     let inputText = document.getElementById("playerName").value.trim().toUpperCase();
     if (inputText) {
@@ -145,42 +49,23 @@ function addPlayer() {
             }
         });
         savePlayers();
-        displayPlayers();
-        generateSchedule();
     }
     document.getElementById("playerName").value = "";
 }
 
+// 🔹 Remove Player 🔹
 function removePlayer(index) {
     players.splice(index, 1);
     savePlayers();
-    displayPlayers();
-    generateSchedule();
 }
 
+// 🔹 Clear Players 🔹
 function clearPlayers() {
     players = [];
-    localStorage.removeItem("players");
-    displayPlayers();
-    generateSchedule();
+    savePlayers();
 }
 
-function handleFileUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        const text = e.target.result;
-        const lines = text.split("\n").map(line => line.trim().toUpperCase()).filter(line => line);
-        players = [...new Set([...players, ...lines])];
-        savePlayers();
-        displayPlayers();
-        generateSchedule();
-    };
-    reader.readAsText(file);
-}
-
+// 🔹 Update Settings 🔹
 function updateSettings() {
     numCourts = parseInt(document.getElementById("numCourts").value) || numCourts;
     numRounds = parseInt(document.getElementById("numRounds").value) || numRounds;
@@ -193,6 +78,66 @@ function updateSettings() {
     generateSchedule();
 }
 
+// 🔹 Generate Schedule 🔹
+function generateSchedule() {
+    const scheduleBody = document.getElementById("scheduleBody");
+    if (players.length < 4) {
+        scheduleBody.innerHTML = "<tr><td colspan='" + (numCourts + 1) + "'>Not enough players to create matches.</td></tr>";
+        return;
+    }
+
+    let shuffledPlayers = [...players];
+    schedule = [];
+
+    for (let i = 0; i < numRounds; i++) {
+        shuffledPlayers = shufflePlayers(shuffledPlayers);
+        let roundMatches = [];
+
+        for (let j = 0; j < numCourts; j++) {
+            if (shuffledPlayers.length < 4) break;
+            let courtPlayers = shuffledPlayers.splice(0, 4);
+            roundMatches.push(`${courtPlayers[0]} & ${courtPlayers[1]} vs ${courtPlayers[2]} & ${courtPlayers[3]}`);
+        }
+        schedule.push(roundMatches);
+    }
+
+    displaySchedule();
+}
+
+// 🔹 Display Players 🔹
+function displayPlayers() {
+    const playerGrid = document.getElementById("playerGrid");
+    const playerCount = document.getElementById("playerCount");
+    playerGrid.innerHTML = "";
+    playerCount.textContent = `(${players.length})`;
+
+    players.forEach((player, index) => {
+        let div = document.createElement("div");
+        div.className = "player-item";
+        div.innerHTML = `${player} <button class="remove-btn" onclick="removePlayer(${index})">❌</button>`;
+        playerGrid.appendChild(div);
+    });
+}
+
+// 🔹 Display Schedule 🔹
+function displaySchedule() {
+    const scheduleBody = document.getElementById("scheduleBody");
+    scheduleBody.innerHTML = "";
+    
+    schedule.forEach((round, index) => {
+        let row = `<tr><td>Round ${index + 1}</td>`;
+        round.forEach(court => row += `<td>${court}</td>`);
+        row += `</tr>`;
+        scheduleBody.innerHTML += row;
+    });
+}
+
+// 🔹 Utility: Shuffle Players 🔹
+function shufflePlayers(arr) {
+    return arr.sort(() => Math.random() - 0.5);
+}
+
+// 🔹 Print Schedule 🔹
 function printSchedule() {
     let scheduleHTML = document.getElementById("matchTable").outerHTML;
     let newWindow = window.open("", "_blank");
@@ -202,23 +147,22 @@ function printSchedule() {
         <body>
             <h2>Match Schedule</h2>
             ${scheduleHTML}
-            <script>
-                window.onload = function() { window.print(); window.close(); }
-            </script>
+            <script>window.onload = function() { window.print(); window.close(); }</script>
         </body>
         </html>
     `);
     newWindow.document.close();
 }
 
-document.getElementById("playerName").addEventListener("keypress", function (event) {
+// 🔹 Event Listeners 🔹
+document.getElementById("playerName").addEventListener("keypress", function(event) {
     if (event.key === "Enter") {
         event.preventDefault();
         addPlayer();
     }
 });
-
-document.getElementById("csvUpload").addEventListener("change", handleFileUpload);
-
 document.getElementById("numCourts").addEventListener("input", updateSettings);
 document.getElementById("numRounds").addEventListener("input", updateSettings);
+
+// Load players from Firestore on startup
+loadPlayers();
