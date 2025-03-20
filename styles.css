@@ -1,0 +1,90 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 20px;
+}
+
+h1, h2 {
+    margin-bottom: 20px;
+}
+
+.settings, .input-container {
+    margin-bottom: 20px;
+}
+
+input {
+    padding: 5px;
+    font-size: 16px;
+    margin: 5px;
+}
+
+button {
+    padding: 6px 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.clear-btn {
+    background-color: red;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-left: 10px;
+    border-radius: 5px;
+}
+
+.clear-btn:hover {
+    background-color: darkred;
+}
+
+table {
+    width: 90%;
+    margin: 0 auto;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+}
+
+th {
+    background-color: #f4f4f4;
+}
+
+/* Player List Grid */
+#playerGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    justify-content: center;
+    margin: 10px auto;
+    max-width: 800px;
+}
+
+.player-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f4f4f4;
+    padding: 8px;
+    border-radius: 5px;
+}
+
+.remove-btn {
+    background: black;
+    color: white;
+    border: none;
+    padding: 3px 7px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: 0.2s;
+}
+
+.remove-btn:hover {
+    background: gray;
+}
